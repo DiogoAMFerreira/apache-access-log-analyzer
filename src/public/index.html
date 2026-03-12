@@ -1,0 +1,507 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Access Dashboards — Upload</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 48px 16px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+    }
+    header h1 { font-size: 2rem; font-weight: 700; color: #f8fafc; }
+    header p  { margin-top: 8px; color: #94a3b8; font-size: 0.95rem; }
+
+    .card {
+      background: #1e2330;
+      border: 1px solid #2d3348;
+      border-radius: 12px;
+      padding: 32px;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    /* Drop zone */
+    #drop-zone {
+      border: 2px dashed #3b4a6b;
+      border-radius: 8px;
+      padding: 48px 24px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    #drop-zone.dragover {
+      border-color: #6366f1;
+      background: rgba(99,102,241,0.08);
+    }
+    #drop-zone svg { color: #6366f1; margin-bottom: 12px; }
+    #drop-zone p   { color: #94a3b8; font-size: 0.9rem; }
+    #drop-zone strong { color: #e2e8f0; }
+
+    #file-input { display: none; }
+
+    /* Client input */
+    .field-group {
+      margin-top: 20px;
+    }
+    .field-group label {
+      display: block;
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 6px;
+    }
+    .field-group input[type="text"] {
+      width: 100%;
+      padding: 10px 14px;
+      background: #131720;
+      border: 1px solid #3b4a6b;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .field-group input[type="text"]:focus { border-color: #6366f1; }
+
+    .btn {
+      display: inline-block;
+      margin-top: 16px;
+      padding: 10px 24px;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.9rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn:hover { background: #4f46e5; }
+    .btn:disabled { background: #3b4a6b; cursor: not-allowed; }
+
+    /* Selected file name */
+    #file-name {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: #94a3b8;
+      min-height: 20px;
+      text-align: center;
+    }
+
+    /* Upload progress (transfer) */
+    #progress-wrap {
+      margin-top: 20px;
+      display: none;
+    }
+    #progress-bar-bg {
+      background: #2d3348;
+      border-radius: 99px;
+      height: 8px;
+      overflow: hidden;
+    }
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: #6366f1;
+      border-radius: 99px;
+      transition: width 0.3s ease;
+    }
+    #progress-label {
+      margin-top: 8px;
+      font-size: 0.8rem;
+      color: #94a3b8;
+      text-align: center;
+    }
+
+    /* Job tracker card */
+    #job-tracker {
+      margin-top: 24px;
+      width: 100%;
+      max-width: 600px;
+      background: #1e2330;
+      border: 1px solid #2d3348;
+      border-radius: 12px;
+      padding: 20px 24px;
+      display: none;
+    }
+    #job-tracker .jt-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+      margin-bottom: 10px;
+    }
+    #job-status-text {
+      font-size: 0.95rem;
+      color: #e2e8f0;
+      margin-bottom: 10px;
+    }
+    #job-progress-bg {
+      background: #2d3348;
+      border-radius: 99px;
+      height: 6px;
+      overflow: hidden;
+    }
+    #job-progress-fill {
+      height: 100%;
+      width: 30%;
+      background: #6366f1;
+      border-radius: 99px;
+      animation: indeterminate 1.4s ease infinite;
+      transform-origin: left;
+    }
+    @keyframes indeterminate {
+      0%   { transform: translateX(-100%) scaleX(0.5); }
+      50%  { transform: translateX(50%)   scaleX(1); }
+      100% { transform: translateX(300%)  scaleX(0.5); }
+    }
+    #job-progress-fill.done { animation: none; width: 100%; background: #22c55e; }
+    #job-progress-fill.error { animation: none; width: 100%; background: #ef4444; }
+    #job-link { margin-top: 12px; display: none; }
+    #job-link a { color: #818cf8; font-size: 0.9rem; }
+
+    /* Error */
+    #error-msg {
+      margin-top: 16px;
+      padding: 10px 14px;
+      background: rgba(239,68,68,0.12);
+      border: 1px solid rgba(239,68,68,0.4);
+      border-radius: 6px;
+      color: #f87171;
+      font-size: 0.85rem;
+      display: none;
+    }
+
+    /* Import history */
+    .section-title {
+      margin-top: 48px;
+      margin-bottom: 16px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      color: #f8fafc;
+      width: 100%;
+      max-width: 600px;
+    }
+
+    table {
+      width: 100%;
+      max-width: 600px;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+    thead th {
+      text-align: left;
+      padding: 8px 12px;
+      color: #64748b;
+      border-bottom: 1px solid #2d3348;
+      font-weight: 600;
+      text-transform: uppercase;
+      font-size: 0.75rem;
+      letter-spacing: 0.05em;
+    }
+    tbody tr { border-bottom: 1px solid #1e2330; transition: background 0.15s; }
+    tbody tr:hover { background: #1e2330; }
+    tbody td { padding: 10px 12px; color: #cbd5e1; }
+    tbody td a { color: #818cf8; text-decoration: none; }
+    tbody td a:hover { text-decoration: underline; }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 99px;
+      font-size: 0.75rem;
+      font-weight: 600;
+    }
+    .badge-ok  { background: rgba(34,197,94,0.15); color: #4ade80; }
+    .badge-warn { background: rgba(234,179,8,0.15); color: #facc15; }
+
+    #history-empty {
+      color: #64748b;
+      font-size: 0.9rem;
+      text-align: center;
+      padding: 24px 0;
+      width: 100%;
+      max-width: 600px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Access Dashboards</h1>
+  <p>Upload an Apache2 <code>access.log</code> to analyse your traffic</p>
+</header>
+
+<div class="card">
+  <form id="upload-form" enctype="multipart/form-data">
+    <div id="drop-zone">
+      <svg width="40" height="40" fill="none" stroke="currentColor" stroke-width="1.5" viewBox="0 0 24 24">
+        <path stroke-linecap="round" stroke-linejoin="round"
+          d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5"/>
+      </svg>
+      <p><strong>Drag &amp; drop</strong> your access.log here</p>
+      <p>or</p>
+      <button type="button" class="btn" id="browse-btn">Browse file</button>
+      <input type="file" id="file-input" name="logfile" accept=".log,.txt" />
+    </div>
+
+    <div id="file-name"></div>
+
+    <div class="field-group">
+      <label for="instance-input">Instance name</label>
+      <input type="text" id="instance-input" name="instance" placeholder="e.g. Acme Corp" />
+    </div>
+
+    <div id="progress-wrap">
+      <div id="progress-bar-bg"><div id="progress-bar"></div></div>
+      <div id="progress-label">Uploading…</div>
+    </div>
+
+    <div id="error-msg"></div>
+
+    <div style="text-align:center; margin-top: 20px;">
+      <button type="submit" class="btn" id="submit-btn" disabled>Upload &amp; Analyse</button>
+    </div>
+  </form>
+</div>
+
+<div id="job-tracker">
+  <div class="jt-title">Processing</div>
+  <div id="job-status-text">Queued…</div>
+  <div id="job-progress-bg"><div id="job-progress-fill"></div></div>
+  <div id="job-link"><a id="job-dashboard-link" href="#">View dashboard →</a></div>
+</div>
+
+<div class="section-title">Previous imports</div>
+<div id="history-empty" style="display:none">No imports yet.</div>
+<table id="history-table" style="display:none">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Instance</th>
+      <th>Filename</th>
+      <th>Lines parsed</th>
+      <th>Imported at</th>
+      <th></th>
+    </tr>
+  </thead>
+  <tbody id="history-body"></tbody>
+</table>
+
+<script>
+  const dropZone   = document.getElementById('drop-zone');
+  const fileInput  = document.getElementById('file-input');
+  const browseBtn  = document.getElementById('browse-btn');
+  const submitBtn  = document.getElementById('submit-btn');
+  const fileNameEl = document.getElementById('file-name');
+  const form       = document.getElementById('upload-form');
+  const progressWrap = document.getElementById('progress-wrap');
+  const progressBar  = document.getElementById('progress-bar');
+  const progressLbl  = document.getElementById('progress-label');
+  const errorMsg     = document.getElementById('error-msg');
+  const jobTracker   = document.getElementById('job-tracker');
+  const jobStatusTxt = document.getElementById('job-status-text');
+  const jobFill      = document.getElementById('job-progress-fill');
+  const jobLink      = document.getElementById('job-link');
+  const jobDashLink  = document.getElementById('job-dashboard-link');
+
+  browseBtn.addEventListener('click', () => fileInput.click());
+
+  fileInput.addEventListener('change', () => {
+    if (fileInput.files[0]) selectFile(fileInput.files[0]);
+  });
+
+  dropZone.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropZone.classList.add('dragover');
+  });
+  dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+  dropZone.addEventListener('drop', (e) => {
+    e.preventDefault();
+    dropZone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      fileInput.files = e.dataTransfer.files;
+      selectFile(file);
+    }
+  });
+
+  function selectFile(file) {
+    fileNameEl.textContent = `Selected: ${file.name} (${formatBytes(file.size)})`;
+    submitBtn.disabled = false;
+    hideError();
+  }
+
+  let pollTimer = null;
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    if (!fileInput.files[0]) return;
+
+    hideError();
+    submitBtn.disabled = true;
+    progressWrap.style.display = 'block';
+    progressBar.style.width = '0%';
+    progressLbl.textContent = 'Uploading…';
+
+    const xhr = new XMLHttpRequest();
+    xhr.open('POST', '/upload');
+
+    xhr.upload.addEventListener('progress', (ev) => {
+      if (ev.lengthComputable) {
+        const pct = Math.round((ev.loaded / ev.total) * 100);
+        progressBar.style.width = pct + '%';
+        progressLbl.textContent = pct < 100 ? `Uploading… ${pct}%` : 'Queuing…';
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      progressWrap.style.display = 'none';
+      if (xhr.status >= 200 && xhr.status < 300) {
+        const { jobId } = JSON.parse(xhr.responseText);
+        startPolling(jobId);
+      } else {
+        submitBtn.disabled = false;
+        try {
+          showError(JSON.parse(xhr.responseText).error || 'Upload failed');
+        } catch (_) {
+          showError('Upload failed (status ' + xhr.status + ')');
+        }
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      progressWrap.style.display = 'none';
+      submitBtn.disabled = false;
+      showError('Network error — could not reach the server');
+    });
+
+    xhr.send(new FormData(form));
+  });
+
+  function startPolling(jobId) {
+    jobTracker.style.display = 'block';
+    jobFill.className = '';
+    jobLink.style.display = 'none';
+    jobStatusTxt.textContent = 'Queued — waiting to start…';
+    if (pollTimer) clearInterval(pollTimer);
+    pollTimer = setInterval(() => pollJob(jobId), 2000);
+  }
+
+  async function pollJob(jobId) {
+    let job;
+    try {
+      job = await fetch(`/api/jobs/${jobId}`).then(r => r.json());
+    } catch (_) { return; }
+
+    if (job.status === 'pending') {
+      jobStatusTxt.textContent = 'Queued — waiting to start…';
+    } else if (job.status === 'processing') {
+      const elapsed = job.started_at
+        ? Math.round((Date.now() - new Date(job.started_at).getTime()) / 1000)
+        : 0;
+      jobStatusTxt.textContent =
+        `Processing: ${job.parsed_lines.toLocaleString()} lines parsed · ${elapsed}s elapsed`;
+    } else if (job.status === 'done') {
+      clearInterval(pollTimer);
+      pollTimer = null;
+      jobFill.className = 'done';
+      jobStatusTxt.textContent = `Done — ${job.parsed_lines.toLocaleString()} lines imported`;
+      jobDashLink.href = `/dashboard.html?import_id=${job.import_id}`;
+      jobLink.style.display = 'block';
+      submitBtn.disabled = false;
+      loadHistory();
+    } else if (job.status === 'error') {
+      clearInterval(pollTimer);
+      pollTimer = null;
+      jobFill.className = 'error';
+      jobStatusTxt.textContent = `Failed: ${job.error}`;
+      submitBtn.disabled = false;
+    }
+  }
+
+  function showError(msg) { errorMsg.textContent = msg; errorMsg.style.display = 'block'; }
+  function hideError()    { errorMsg.style.display = 'none'; }
+
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1024 ** 2) return (b / 1024).toFixed(1) + ' KB';
+    return (b / 1024 ** 2).toFixed(1) + ' MB';
+  }
+
+  // Load import history
+  async function loadHistory() {
+    const imports = await fetch('/api/imports').then(r => r.json());
+    const tbody = document.getElementById('history-body');
+    const table = document.getElementById('history-table');
+    const empty = document.getElementById('history-empty');
+
+    if (!imports.length) {
+      empty.style.display = 'block';
+      return;
+    }
+
+    table.style.display = 'table';
+    tbody.innerHTML = imports.map(imp => {
+      const totalLines  = imp.total_lines   ?? 0;
+      const parsedLines = imp.parsed_lines  ?? 0;
+      const inserted    = imp.inserted_lines ?? parsedLines;
+      const pct = totalLines > 0
+        ? Math.round((parsedLines / totalLines) * 100) : 100;
+      const badge = pct >= 90
+        ? `<span class="badge badge-ok">${pct}%</span>`
+        : `<span class="badge badge-warn">${pct}%</span>`;
+      const dupCount = parsedLines - inserted;
+      const dupBadge = dupCount > 0
+        ? ` <span class="badge badge-warn" title="${dupCount.toLocaleString()} duplicate lines skipped">${dupCount.toLocaleString()} dup</span>`
+        : '';
+      const date = new Date(imp.imported_at).toLocaleString();
+      const instanceLink = imp.instance
+        ? `<a href="/dashboard.html?instance=${encodeURIComponent(imp.instance)}" title="View all imports for this instance">${escHtml(imp.instance)}</a>`
+        : '<span style="color:#475569">—</span>';
+      return `<tr>
+        <td>${imp.id}</td>
+        <td>${instanceLink}</td>
+        <td>${escHtml(imp.filename)}</td>
+        <td>${inserted.toLocaleString()} / ${totalLines.toLocaleString()} ${badge}${dupBadge}</td>
+        <td>${date}</td>
+        <td><a href="/dashboard.html?import_id=${imp.id}">View →</a></td>
+      </tr>`;
+    }).join('');
+  }
+
+  function escHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  }
+
+  // On page load, resume tracking any active job (handles reload mid-processing)
+  async function resumeActiveJob() {
+    let jobs;
+    try {
+      jobs = await fetch('/api/jobs').then(r => r.json());
+    } catch (_) { return; }
+    const active = jobs.find(j => j.status === 'pending' || j.status === 'processing');
+    if (active) startPolling(active.id);
+  }
+
+  loadHistory();
+  resumeActiveJob();
+</script>
+</body>
+</html>

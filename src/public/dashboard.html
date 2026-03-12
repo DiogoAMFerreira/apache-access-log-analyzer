@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Access Dashboards</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #0f1117;
+      color: #e2e8f0;
+      min-height: 100vh;
+      padding: 32px 24px 64px;
+    }
+
+    /* ── Header ── */
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 32px;
+    }
+    header h1 { font-size: 1.5rem; font-weight: 700; color: #f8fafc; }
+    #import-info { font-size: 0.85rem; color: #64748b; }
+    .back-link {
+      font-size: 0.85rem;
+      color: #818cf8;
+      text-decoration: none;
+    }
+    .back-link:hover { text-decoration: underline; }
+
+    /* ── Filter bar ── */
+    .filter-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: flex-end;
+      background: #1e2330;
+      border: 1px solid #2d3348;
+      border-radius: 10px;
+      padding: 16px 20px;
+      margin-bottom: 24px;
+    }
+    .filter-group {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      min-width: 140px;
+    }
+    .filter-group.wide { min-width: 200px; flex: 1; }
+    .filter-label {
+      font-size: 0.7rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #64748b;
+    }
+    .filter-input {
+      padding: 8px 10px;
+      background: #131720;
+      border: 1px solid #3b4a6b;
+      border-radius: 6px;
+      color: #e2e8f0;
+      font-size: 0.85rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .filter-input:focus { border-color: #6366f1; }
+    .filter-input option { background: #1e2330; }
+    .filter-actions {
+      display: flex;
+      gap: 8px;
+      align-self: flex-end;
+    }
+    .btn-apply {
+      padding: 8px 20px;
+      background: #6366f1;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-apply:hover { background: #4f46e5; }
+    .btn-clear {
+      padding: 8px 16px;
+      background: transparent;
+      color: #64748b;
+      border: 1px solid #3b4a6b;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: color 0.2s, border-color 0.2s;
+    }
+    .btn-clear:hover { color: #e2e8f0; border-color: #64748b; }
+
+    /* ── KPI cards ── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .kpi-card {
+      background: #1e2330;
+      border: 1px solid #2d3348;
+      border-radius: 10px;
+      padding: 20px 24px;
+    }
+    .kpi-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #64748b;
+      margin-bottom: 8px;
+    }
+    .kpi-value {
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #f8fafc;
+      line-height: 1;
+    }
+    .kpi-value.error { color: #f87171; }
+
+    /* ── Chart grid ── */
+    .chart-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(420px, 1fr));
+      gap: 20px;
+    }
+    .chart-card {
+      background: #1e2330;
+      border: 1px solid #2d3348;
+      border-radius: 10px;
+      padding: 24px;
+    }
+    .chart-card.full { grid-column: 1 / -1; }
+    .chart-title {
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: #94a3b8;
+      margin-bottom: 20px;
+    }
+    .chart-wrap { position: relative; height: 280px; }
+    .chart-wrap.tall { height: 340px; }
+
+    /* ── Heatmap ── */
+    #heatmap-wrap {
+      overflow-x: auto;
+    }
+    .heatmap-grid {
+      display: grid;
+      grid-template-columns: 40px repeat(24, 1fr);
+      gap: 3px;
+      min-width: 640px;
+    }
+    .hm-label {
+      font-size: 0.7rem;
+      color: #64748b;
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      padding-right: 6px;
+    }
+    .hm-hour-label {
+      font-size: 0.65rem;
+      color: #64748b;
+      text-align: center;
+    }
+    .hm-cell {
+      height: 28px;
+      border-radius: 3px;
+      background: #1a2035;
+      transition: opacity 0.15s;
+      cursor: default;
+      position: relative;
+    }
+    .hm-cell:hover::after {
+      content: attr(data-tip);
+      position: absolute;
+      bottom: calc(100% + 6px);
+      left: 50%;
+      transform: translateX(-50%);
+      background: #0f1117;
+      border: 1px solid #3b4a6b;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 0.75rem;
+      color: #e2e8f0;
+      white-space: nowrap;
+      z-index: 10;
+      pointer-events: none;
+    }
+
+    /* Loading overlay */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: #0f1117;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      font-size: 1rem;
+      color: #64748b;
+    }
+    #loading.hidden { display: none; }
+  </style>
+</head>
+<body>
+
+<div id="loading">Loading dashboard…</div>
+
+<header>
+  <div>
+    <h1>Access Dashboard</h1>
+    <div id="import-info">Loading…</div>
+  </div>
+  <a class="back-link" href="/">← Upload another file</a>
+</header>
+
+<!-- Filter Bar -->
+<div class="filter-bar">
+  <div class="filter-group">
+    <label class="filter-label" for="f-instance">Instance</label>
+    <select id="f-instance" class="filter-input">
+      <option value="">All instances</option>
+    </select>
+  </div>
+  <div class="filter-group wide">
+    <label class="filter-label" for="f-path">Path contains</label>
+    <input type="text" id="f-path" class="filter-input" placeholder="e.g. /api/users" />
+  </div>
+  <div class="filter-group">
+    <label class="filter-label" for="f-date-from">Date from</label>
+    <input type="date" id="f-date-from" class="filter-input" />
+  </div>
+  <div class="filter-group">
+    <label class="filter-label" for="f-date-to">Date to</label>
+    <input type="date" id="f-date-to" class="filter-input" />
+  </div>
+  <div class="filter-actions">
+    <button class="btn-apply" id="apply-btn">Apply</button>
+    <button class="btn-clear" id="clear-btn">Clear</button>
+  </div>
+</div>
+
+<!-- KPI Cards -->
+<div class="kpi-grid">
+  <div class="kpi-card">
+    <div class="kpi-label">Total Requests</div>
+    <div class="kpi-value" id="kpi-total">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Unique IPs</div>
+    <div class="kpi-value" id="kpi-ips">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Bandwidth</div>
+    <div class="kpi-value" id="kpi-bandwidth">—</div>
+  </div>
+  <div class="kpi-card">
+    <div class="kpi-label">Error Rate (4xx + 5xx)</div>
+    <div class="kpi-value error" id="kpi-errors">—</div>
+  </div>
+</div>
+
+<!-- Charts -->
+<div class="chart-grid">
+
+  <div class="chart-card full">
+    <div class="chart-title">Requests over time</div>
+    <div class="chart-wrap tall"><canvas id="chart-timeline"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Status code distribution</div>
+    <div class="chart-wrap"><canvas id="chart-status"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">HTTP Methods</div>
+    <div class="chart-wrap"><canvas id="chart-methods"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Top 10 URLs</div>
+    <div class="chart-wrap tall"><canvas id="chart-paths"></canvas></div>
+  </div>
+
+  <div class="chart-card">
+    <div class="chart-title">Top 10 Client IPs</div>
+    <div class="chart-wrap tall"><canvas id="chart-ips"></canvas></div>
+  </div>
+
+  <div class="chart-card full">
+    <div class="chart-title">Top 10 User Agents</div>
+    <div class="chart-wrap"><canvas id="chart-agents"></canvas></div>
+  </div>
+
+  <div class="chart-card full">
+    <div class="chart-title">Traffic heatmap — requests by hour &amp; weekday</div>
+    <div id="heatmap-wrap"><div id="heatmap" class="heatmap-grid"></div></div>
+  </div>
+
+</div>
+
+<script src="/js/dashboard.js"></script>
+</body>
+</html>
