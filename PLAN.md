@@ -190,6 +190,13 @@ Files: `src/parser.js`, `src/db.js`, `src/routes/upload.js`, `src/public/index.h
 - Multi-instance consistency was already correct via the `buildFilter` subquery — no changes needed.
 - `client` renamed to `instance` throughout (DB column, API endpoint, query param, UI labels).
 
+### Step 14 — 5XX errors table on dashboard ✅
+Files: `src/routes/api.js`, `src/public/js/dashboard.js`, `src/public/dashboard.html`
+- New `GET /api/5xx-by-file` endpoint: filters `log_entries` to `status >= 500`, groups by `(path, status)`, returns `{ path, status, count, last_occurrence }`. Top 50 by count. All standard filter params applied.
+- Dashboard fetches the new endpoint in parallel with all others (11 total now).
+- New `render5xxTable()` renders a dark-themed table below the chart grid showing request path, status code, count, and last occurrence.
+- If no 5XX errors exist for the current filter, a "No 5XX errors in the selected data." message is shown.
+
 ### Step 13 — Async upload queue + background processing + progress tracking ✅
 Files: `src/db.js`, `src/worker.js` (new), `src/routes/upload.js`, `src/routes/api.js`, `src/app.js`, `src/public/index.html`
 - `jobs` table added to SQLite: id, status (pending/processing/done/error), filename, file_path, instance, parsed_lines, import_id, error, created_at, started_at, completed_at.

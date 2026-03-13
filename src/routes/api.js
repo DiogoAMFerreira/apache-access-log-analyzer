@@ -126,6 +126,31 @@ router.get('/hourly-heatmap', (req, res) => {
   res.json(rows);
 });
 
+// GET /api/5xx-by-file — 5XX error count + last occurrence per (path, status code)
+router.get('/5xx-by-file', (req, res) => {
+  const { import_id, instance, path_filter, date_from, date_to } = req.query;
+  const esc = (s) => String(s).replace(/'/g, "''");
+  const conditions = ['status >= 500'];
+  if (import_id)   conditions.push(`import_id = ${Number(import_id)}`);
+  if (instance)    conditions.push(`import_id IN (SELECT id FROM imports WHERE instance = '${esc(instance)}')`);
+  if (path_filter) conditions.push(`path LIKE '%${esc(path_filter)}%'`);
+  if (date_from)   conditions.push(`date(timestamp) >= '${esc(date_from)}'`);
+  if (date_to)     conditions.push(`date(timestamp) <= '${esc(date_to)}'`);
+  const rows = db.prepare(`
+    SELECT
+      path,
+      status,
+      COUNT(*)         AS count,
+      MAX(timestamp)   AS last_occurrence
+    FROM log_entries
+    WHERE ${conditions.join(' AND ')}
+    GROUP BY path, status
+    ORDER BY count DESC
+    LIMIT 50
+  `).all();
+  res.json(rows);
+});
+
 // GET /api/jobs — all jobs ordered by most recent first
 router.get('/jobs', (_req, res) => {
   res.json(getJobs());

@@ -1,7 +1,8 @@
 # List of TODOs
 
-- Add a table to the dashboard with the number of a 5XX HTTP code per specific file and 5XX HTTP code and date of last ocurrence
 - Create a small menu that allows me to pick either the upload page or the Dashboard page
+- Add a new filter to only show specific request types on the Dashboard (GET, POST, PUT, PATCH, ...)
+- Evaluate changing the database from SQLLite to MongoDB or PostgreSQL for better performance
 
 # Rules
 
@@ -14,3 +15,5 @@ When implementing any of the TODO's above make sure to:
 5. Update the SPECIFICATION.md to add or change the specification of the project
 6. Remove the TODO from this file.
 7. Suggest me a new TODO to add to the list.
+8. Commit the changes to the branch with a commit message explaining what changed but ask me to confirm the commit changes.
+9. Publish the changes to the remote repository but ask me before doing it

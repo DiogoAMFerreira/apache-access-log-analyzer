@@ -200,6 +200,7 @@ All data endpoints accept the following optional query params (combinable, AND l
 | GET    | `/api/top-user-agents`    | Top 10 `[{ user_agent, count }]` (nulls excluded)   |
 | GET    | `/api/methods`            | `[{ method, count }]`                               |
 | GET    | `/api/hourly-heatmap`     | `[{ hour (0–23), weekday (0=Sun–6=Sat), count }]`   |
+| GET    | `/api/5xx-by-file`        | `[{ path, status, count, last_occurrence }]` — top 50 rows by count, grouped by (request path × 5XX status code), filtered by all standard query params |
 
 ---
 
@@ -230,9 +231,10 @@ All data endpoints accept the following optional query params (combinable, AND l
   shareable without a page reload.
 - Chart instances are tracked in a registry and `.destroy()`-ed before each
   re-render to prevent Canvas reuse errors.
-- Fetches all 10 API endpoints in parallel via `Promise.all`.
+- Fetches all 11 API endpoints in parallel via `Promise.all`.
 - Renders an import info header showing active context (import name or filter summary).
 - **4 KPI cards:** Total Requests, Unique IPs, Total Bandwidth, Error Rate.
+- **5XX Errors by Path table** — below the chart grid; top 50 rows grouped by (request path × status code). Columns: Path, Status (red badge), Count, Last Occurrence. Shows "No 5XX errors" message when none exist. Respects all active filters.
 - **7 charts** (all Chart.js, dark-themed):
   | # | Panel | Chart type |
   |---|-------|-----------|

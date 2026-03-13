@@ -112,6 +112,7 @@
       `/api/hourly-heatmap${qs}`,
       `/api/imports`,
       `/api/instances`,
+      `/api/5xx-by-file${qs}`,
     ];
     const results = await Promise.all(urls.map(u => fetch(u).then(r => r.json())));
     return {
@@ -125,6 +126,7 @@
       heatmap:     results[7],
       imports:     results[8],
       instances:   results[9],
+      errors5xx:   results[10],
     };
   }
 
@@ -354,6 +356,38 @@
     }
   }
 
+  // ── 5XX errors table ──────────────────────────────────────────────────────
+
+  function escHtml(s) {
+    return String(s)
+      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function render5xxTable(rows) {
+    const wrap = document.getElementById('errors-table-wrap');
+    if (!rows.length) {
+      wrap.innerHTML = '<p class="no-errors">No 5XX errors in the selected data.</p>';
+      return;
+    }
+    const tbody = rows.map(r => {
+      const date = new Date(r.last_occurrence).toLocaleString();
+      return `<tr>
+        <td>${escHtml(r.path)}</td>
+        <td><span class="status-badge">${r.status}</span></td>
+        <td>${fmt(r.count)}</td>
+        <td>${date}</td>
+      </tr>`;
+    }).join('');
+    wrap.innerHTML = `
+      <table class="err-table">
+        <thead><tr>
+          <th>Path</th><th>Status</th><th>Count</th><th>Last Occurrence</th>
+        </tr></thead>
+        <tbody>${tbody}</tbody>
+      </table>`;
+  }
+
   // ── Render everything ─────────────────────────────────────────────────────
 
   function renderAll(data, filters) {
@@ -367,6 +401,7 @@
     renderHBar('ips',   'chart-ips',   data.topIps,   'ip',   '#22d3ee');
     renderAgents(data.topAgents);
     renderHeatmap(data.heatmap);
+    render5xxTable(data.errors5xx);
   }
 
   // ── Filter bar wiring ─────────────────────────────────────────────────────
